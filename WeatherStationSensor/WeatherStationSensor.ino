@@ -10,6 +10,9 @@
 
 #include <DHT.h>  
 
+
+const bool sendAlways = true;
+
 const float SEALEVEL = 688; // Westendorf
 const float SEALEVEL_PRESSURE = 1013.25;
 
@@ -124,7 +127,8 @@ void initHumiditySensor()
 	dht.setup(HUMIDITY_SENSOR_DIGITAL_PIN);
 }
 
-void setup() {
+void setup() 
+{
 	gw.begin();
 	gw.sendSketchInfo("Weather Station Sensor", "2.0");
 
@@ -202,7 +206,8 @@ bool updatePressureSensor()
 		int forecast = sample(pressure);
 		int situation = getWeatherSituation(pressure);
 
-		if (pressureTemperature != lastPressureTemp) 
+
+		if (sendAlways || (pressureTemperature != lastPressureTemp))
 		{
 			changed = true;
 			lastPressureTemp = pressureTemperature;
@@ -215,7 +220,8 @@ bool updatePressureSensor()
 			}
 		}
 
-		if (pressure != lastPressure) 
+
+		if (sendAlways || (pressure != lastPressure))
 		{
 			changed = true;
 			lastPressure = pressure;
@@ -228,7 +234,8 @@ bool updatePressureSensor()
 			}
 		}
 
-		if (forecast != lastForecast) 
+
+		if (sendAlways || (forecast != lastForecast))
 		{
 			changed = true;
 			lastForecast = forecast;
@@ -240,7 +247,8 @@ bool updatePressureSensor()
 			}
 		}
 
-		if (situation != lastSituation)
+
+		if (sendAlways || (situation != lastSituation))
 		{
 			changed = true;
 			lastSituation = situation;
@@ -263,54 +271,65 @@ bool updateHumiditySensor()
 	float temperature = dht.getTemperature();
 	float humidity = dht.getHumidity();
 
-
-	if (isnan(temperature)) 
+	if (!isnan(temperature))
+	{
+#ifdef SEND_WHEN_CHANGED
+		if (temperature != lastTemp)
+#endif
+		{
+			lastTemp = temperature;
+			if (!metric)
+			{
+				temperature = dht.toFahrenheit(temperature);
+			}
+			changed = true;
+			Serial.print(F("T: "));
+			Serial.println(temperature);
+			if (!gw.send(msgTemp.set(temperature, 1)))
+			{
+				lastTemp = -1.0;
+			}
+		}
+	}
+	else
 	{
 		Serial.println(F("Failed reading temperature from DHT"));
 	}
-	else if (temperature != lastTemp) 
+	
+	
+	if (!isnan(humidity))
 	{
-		lastTemp = temperature;
-		if (!metric) 
+#ifdef SEND_WHEN_CHANGED
+		if (humidity != lastHum)
+#endif
 		{
-			temperature = dht.toFahrenheit(temperature);
-		}
-		changed = true;
-		Serial.print(F("T: "));
-		Serial.println(temperature);
-		if (!gw.send(msgTemp.set(temperature, 1)))
-		{
-			lastTemp = -1.0;
+			lastHum = humidity;
+			changed = true;
+			Serial.print(F("H: "));
+			Serial.println(humidity);
+			if (!gw.send(msgHum.set(lastHum, 1)))
+			{
+				lastHum = -1.0;
+			}
 		}
 	}
-
-	
-	if (isnan(humidity)) 
+	else
 	{
 		Serial.println(F("Failed reading humidity from DHT"));
 	}
-	else if (humidity != lastHum) 
-	{
-		lastHum = humidity;
-		changed = true;
-		Serial.print(F("H: "));
-		Serial.println(humidity);
-		if (!gw.send(msgHum.set(lastHum, 1)))
-		{
-			lastHum = -1.0;
-		}
-	}
-
+	
 	return changed;
 }
 
-void loop() {
+void loop() 
+{
 
 	updatePressureSensor();
 	gw.sleep(SLEEP_TIME1);
 	updateHumiditySensor();
 	gw.sleep(SLEEP_TIME2);
 }
+
 
 float getLastPressureSamplesAverage()
 {
