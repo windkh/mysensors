@@ -52,21 +52,38 @@ The Arduino Mega is used as it has several hardware serials which makes receivin
 
 //-------------------------------------------------------------------------------------------------
 // if you don't have any of those you do not need the sensor data (simply set em to false)
-#define OPTION_SELECT true		// bit encoded select variable
-#define OPTION_HUMIDITY false	// humidity sensor 1 & 2
-#define OPTION_CO2 false		// CO2 sensor
-#define OPTION_HEATER false		// heater & pre heater
-#define OPTION_PROGRAM false	// bit encoded program variable
-#define OPTION_PROGRAM2 false	// bit encoded program variable 2
+#define OPTION_SELECT true			// bit encoded select variable
+#define OPTION_HUMIDITY false		// humidity sensor 1 & 2
+#define OPTION_CO2 false			// CO2 sensor
+#define OPTION_HEATER true			// heater & pre heater
+#define OPTION_PROGRAM true	    	// bit encoded program variable
+#define OPTION_PROGRAM2 true		// bit encoded program variable 2
+#define OPTION_MULTIPURPOSE1 true	// bit encoded io port 1
+#define OPTION_MULTIPURPOSE2 true	// bit encoded io port 2
+#define OPTION_USE_TIMER true		// sends the cached values every 3 minutes
+
+
+
+
+
 
 //-------------------------------------------------------------------------------------------------
+#ifdef OPTION_USE_TIMER
+#include "Timer.h"
+Timer timer;
+#define TEMP_UPDATE_INTERVAL 3*60000
+#endif
+
+//-------------------------------------------------------------------------------------------------
+
+
 // Note that AltSoftSerial uses RX=8 TX=9 PIN 10 is unsusable!
-#define CE_PIN			 3 // orange 
-#define CS_PIN           4 // yellow
+#define CE_PIN 3 // orange 
+#define CS_PIN 4 // yellow
 
 #define SERIAL_TX_CONTROL_PIN 5   //RS485 Direction control
-#define RS485_TX    HIGH
-#define RS485_RX    LOW
+#define RS485_TX HIGH
+#define RS485_RX LOW
 
 // boost switch button
 #define BOOST_BUTTON_PIN 6
@@ -80,69 +97,83 @@ The Arduino Mega is used as it has several hardware serials which makes receivin
 #define RETRY_DELAY_MS 500 
 
 // Diagnostic LED
-#define BLINK_LED_PIN   13
-#define BLINK_TIME		10
+#define BLINK_LED_PIN 13
+#define BLINK_TIME 10
 
 #define SERIAL_BAUDRATE 115200
 
 
 //-------------------------------------------------------------------------------------------------
 // Child sensor ids
-const uint8_t FAN_SPEED					= 0;
-const uint8_t TEMP_INSIDE				= 1;
-const uint8_t TEMP_OUTSIDE				= 2;
-const uint8_t TEMP_EXHAUST				= 3;
-const uint8_t TEMP_INCOMMING			= 4;
+const uint8_t FAN_SPEED								= 0;
+const uint8_t TEMP_INSIDE							= 1;
+const uint8_t TEMP_OUTSIDE							= 2;
+const uint8_t TEMP_EXHAUST							= 3;
+const uint8_t TEMP_INCOMMING						= 4;
 
-const uint8_t EFFICIENCY_IN				= 5;
-const uint8_t EFFICIENCY_OUT			= 6;
-const uint8_t EFFICIENCY_AVERAGE		= 7;
+const uint8_t EFFICIENCY_IN							= 5;
+const uint8_t EFFICIENCY_OUT						= 6;
+const uint8_t EFFICIENCY_AVERAGE					= 7;
 
-const uint8_t POWER_STATE				= 8;
-const uint8_t CO2_ADJUST_STATE			= 9;
-const uint8_t HUMIDITY_ADJUST_STATE		= 10;
-const uint8_t HEATING_STATE				= 11;
-const uint8_t FILTER_GUARD_INDICATOR	= 12;
-const uint8_t HEATING_INDICATOR			= 13;
-const uint8_t FAULT_INDICATOR			= 14;
-const uint8_t SERVICE_REMINDER_INDICATOR= 15;
+const uint8_t POWER_STATE							= 8;
+const uint8_t CO2_ADJUST_STATE						= 9;
+const uint8_t HUMIDITY_ADJUST_STATE					= 10;
+const uint8_t HEATING_STATE							= 11;
+const uint8_t FILTER_GUARD_INDICATOR				= 12;
+const uint8_t HEATING_INDICATOR						= 13;
+const uint8_t FAULT_INDICATOR						= 14;
+const uint8_t SERVICE_REMINDER_INDICATOR			= 15;
 
-const uint8_t HUMIDITY					= 16;
-const uint8_t BASIC_HUMIDITY_LEVEL		= 17;
-const uint8_t HUMIDITY_SENSOR_1			= 18;
-const uint8_t HUMIDITY_SENSOR_2			= 19;
+const uint8_t HUMIDITY								= 16;
+const uint8_t BASIC_HUMIDITY_LEVEL					= 17;
+const uint8_t HUMIDITY_SENSOR_1						= 18;
+const uint8_t HUMIDITY_SENSOR_2						= 19;
 
-const uint8_t CO2_HIGH					= 20;
-const uint8_t CO2_LOW					= 21;
-const uint8_t CO2_SET_POINT_HIGH		= 22;
-const uint8_t CO2_SET_POINT_LOW			= 23;
+const uint8_t CO2_HIGH								= 20;
+const uint8_t CO2_LOW								= 21;
+const uint8_t CO2_SET_POINT_HIGH					= 22;
+const uint8_t CO2_SET_POINT_LOW						= 23;
 
-const uint8_t FAN_SPEED_MAX				= 24;
-const uint8_t FAN_SPEED_MIN				= 25;
-const uint8_t DC_FAN_INPUT_ADJUSTMENT	= 26;
-const uint8_t DC_FAN_OUTPUT_ADJUSTMENT  = 27;
-const uint8_t INPUT_FAN_STOP_THRESHOLD  = 28;
-
-const uint8_t HEATING_SET_POINT			= 29;
-const uint8_t PRE_HEATING_SET_POINT		= 30;
-const uint8_t HRC_BYPASS_THRESHOLD		= 31;
-const uint8_t CELL_DEFROSTING_THRESHOLD = 32;
+const uint8_t FAN_SPEED_MAX							= 24;
+const uint8_t FAN_SPEED_MIN							= 25;
+const uint8_t DC_FAN_INPUT_ADJUSTMENT				= 26;
+const uint8_t DC_FAN_OUTPUT_ADJUSTMENT				= 27;
+const uint8_t INPUT_FAN_STOP_THRESHOLD				= 28;
+const uint8_t HEATING_SET_POINT						= 29;
+const uint8_t PRE_HEATING_SET_POINT					= 30;
+const uint8_t HRC_BYPASS_THRESHOLD					= 31;
+const uint8_t CELL_DEFROSTING_THRESHOLD				= 32;
 
 // program
-const uint8_t ADJUSTMENT_INTERVAL_MINUTES = 33;
+const uint8_t ADJUSTMENT_INTERVAL_MINUTES			= 33;
 const uint8_t AUTOMATIC_HUMIDITY_LEVEL_SEEKER_STATE = 34;
-const uint8_t BOOST_SWITCH_MODE			= 35;
-const uint8_t RADIATOR_TYPE				= 36;
-const uint8_t CASCADE_ADJUST			= 37;
+const uint8_t BOOST_SWITCH_MODE						= 35;
+const uint8_t RADIATOR_TYPE							= 36;
+const uint8_t CASCADE_ADJUST						= 37;
 
 // program2
-const uint8_t MAX_SPEED_LIMIT_MODE		= 38;
+const uint8_t MAX_SPEED_LIMIT_MODE					= 38;
 
-const uint8_t SERVICE_REMINDER			= 39;
+const uint8_t SERVICE_REMINDER						= 39;
 
 //-------------------------------------------------------------------------------------------------
-const uint8_t BOOST_SWITCH				= 40;
+const uint8_t BOOST_SWITCH							= 40;
 
+//-------------------------------------------------------------------------------------------------
+// multi purpose 1
+const uint8_t POST_HEATING_ON						= 41;
+
+// multi purpose 2
+const uint8_t DAMPER_MOTOR_POSITION					= 42;
+const uint8_t FAULT_SIGNAL_RELAY					= 43;
+const uint8_t SUPPLY_FAN_OFF						= 44;
+const uint8_t PRE_HEATING_ON						= 45;
+const uint8_t EXHAUST_FAN_OFF						= 46;
+const uint8_t FIRE_PLACE_BOOSTER_ON					= 47;
+
+const uint8_t INCOMMING_CURRENT						= 48;
+
+const uint8_t LAST_ERROR_NUMBER						= 49;
 //-------------------------------------------------------------------------------------------------
 
 struct ChildSensor
@@ -157,6 +188,7 @@ struct ChildSensor
 //-------------------------------------------------------------------------------------------------
 static ChildSensor CHILD_SENSORS[] =
 {
+	//active, child id, type, value type, name
 	{ true, FAN_SPEED, S_DIMMER, V_DIMMER, "Fan speed" },
 	{ true, TEMP_INSIDE, S_TEMP, V_TEMP, "Temp inside" },
 	{ true, TEMP_OUTSIDE, S_TEMP, V_TEMP, "Temp outside" },
@@ -186,15 +218,15 @@ static ChildSensor CHILD_SENSORS[] =
 	{ OPTION_CO2, CO2_SET_POINT_HIGH, S_CUSTOM, V_VAR1, "CO2 set point high" },
 	{ OPTION_CO2, CO2_SET_POINT_LOW, S_CUSTOM, V_VAR1, "CO2 set point low" },
 
-	{ true, FAN_SPEED_MAX, S_CUSTOM, V_VAR1, "Fan speed max" },
-	{ true, FAN_SPEED_MIN, S_CUSTOM, V_VAR1, "Fan speed min" },
+	{ true, FAN_SPEED_MAX, S_DIMMER, V_DIMMER, "Fan speed max" },
+	{ true, FAN_SPEED_MIN, S_DIMMER, V_DIMMER, "Fan speed min" },
 	{ true, DC_FAN_INPUT_ADJUSTMENT, S_DIMMER, V_DIMMER, "DC fan input adjustment" },
 	{ true, DC_FAN_OUTPUT_ADJUSTMENT, S_DIMMER, V_DIMMER, "DC fan output adjustment" },
-	{ true, INPUT_FAN_STOP_THRESHOLD, S_TEMP, V_TEMP, "Input fan stop threshold" },
-	{ OPTION_HEATER, HEATING_SET_POINT, S_TEMP, V_TEMP, "Heating setpoint" },
-	{ OPTION_HEATER, PRE_HEATING_SET_POINT, S_TEMP, V_TEMP, "Pre heating setpoint" },
-	{ false, HRC_BYPASS_THRESHOLD, S_TEMP, V_TEMP, "HRC bypass threshold" },
-	{ OPTION_HEATER, CELL_DEFROSTING_THRESHOLD, S_TEMP, V_TEMP, "Cell defrosting threshold" },
+	{ true, INPUT_FAN_STOP_THRESHOLD, S_DIMMER, V_DIMMER, "Input fan stop threshold" },
+	{ OPTION_HEATER, HEATING_SET_POINT, S_DIMMER, V_DIMMER, "Heating setpoint" },
+	{ OPTION_HEATER, PRE_HEATING_SET_POINT, S_DIMMER, V_DIMMER, "Pre heating setpoint" },
+	{ true, HRC_BYPASS_THRESHOLD, S_DIMMER, V_DIMMER, "HRC bypass threshold" },
+	{ OPTION_HEATER, CELL_DEFROSTING_THRESHOLD, S_DIMMER, V_DIMMER, "Cell defrosting threshold" },
 
 	// program
 	{ OPTION_PROGRAM, ADJUSTMENT_INTERVAL_MINUTES, S_CUSTOM, V_VAR1, "Adjustment interval minutes" },
@@ -206,10 +238,26 @@ static ChildSensor CHILD_SENSORS[] =
 	// program2
 	{ OPTION_PROGRAM2, MAX_SPEED_LIMIT_MODE, S_CUSTOM, V_VAR1, "Max speed limit mode" },
 	
-	{ false, SERVICE_REMINDER, S_CUSTOM, V_VAR1, "Service reminder" },
+	{ true, SERVICE_REMINDER, S_CUSTOM, V_VAR1, "Service reminder" },
 
-	// additional non vallox features
+	// non vallox feature: boost switch with caller supplied minutes
 	{ true, BOOST_SWITCH, S_DIMMER, V_DIMMER, "Boost switch minutes" },
+
+
+	// multi purpose 1
+	{ OPTION_MULTIPURPOSE1, POST_HEATING_ON, S_CUSTOM, V_VAR1, "Post heating on" },
+
+	// multi purpose 2
+	{ OPTION_MULTIPURPOSE2, DAMPER_MOTOR_POSITION, S_CUSTOM, V_VAR1, "Post heating on" },
+	{ OPTION_MULTIPURPOSE2, FAULT_SIGNAL_RELAY, S_CUSTOM, V_VAR1, "Fault signal relay" },
+	{ OPTION_MULTIPURPOSE2, SUPPLY_FAN_OFF, S_CUSTOM, V_VAR1, "Supply fan off" },
+	{ OPTION_MULTIPURPOSE2, PRE_HEATING_ON, S_CUSTOM, V_VAR1, "Pre heating on" },
+	{ OPTION_MULTIPURPOSE2, EXHAUST_FAN_OFF, S_CUSTOM, V_VAR1, "Exhaust fan off" },
+	{ OPTION_MULTIPURPOSE2, FIRE_PLACE_BOOSTER_ON, S_CUSTOM, V_VAR1, "Fire place booster on" },
+
+	{ true, INCOMMING_CURRENT, S_CUSTOM, V_VAR1, "Incomming current" },
+
+	{ true, LAST_ERROR_NUMBER, S_CUSTOM, V_VAR1, "Last error number" },
 };
 static uint8_t CHILD_SENSORS_COUNT = sizeof(CHILD_SENSORS) / sizeof(ChildSensor);
 
@@ -218,7 +266,7 @@ static uint8_t CHILD_SENSORS_COUNT = sizeof(CHILD_SENSORS) / sizeof(ChildSensor)
 // here you can select which variables are polled
 static ValloxProperty PROPERTIES_TO_OBSERVE[] =
 {
-	// those are broadcasted cyclically
+	// those are broadcasted periodically
 	//FanSpeedProperty,
 	//TempInsideProperty,
 	//TempOutsideProperty,
@@ -254,11 +302,10 @@ static ValloxProperty PROPERTIES_TO_OBSERVE[] =
 	DCFanOutputAdjustmentProperty,
 	InputFanStopThresholdProperty,
 
-	// we do not have a heater
-	//HeatingSetPointProperty,
-	//PreHeatingSetPointProperty,
+	HeatingSetPointProperty,
+	PreHeatingSetPointProperty,
 	HrcBypassThresholdProperty,
-	//CellDefrostingThresholdProperty,
+	CellDefrostingThresholdProperty,
 
 	// program
 	ProgramProperty,
@@ -272,7 +319,23 @@ static ValloxProperty PROPERTIES_TO_OBSERVE[] =
 	Program2Property,
 	////MaxSpeedLimitModeProperty,
 	
-	ServiceReminderProperty
+	ServiceReminderProperty,
+
+	// ioport multi purpose 1
+	IoPortMultiPurpose1Property,
+	////PostHeatingOnProperty,
+
+	// ioport multi purpose 2
+	IoPortMultiPurpose2Property,
+	////DamperMotorPositionProperty,
+	////FaultSignalRelayProperty,
+	////SupplyFanOffProperty,
+	////PreHeatingOnProperty,
+	////ExhaustFanOffProperty,
+	////FirePlaceBoosterOnProperty,
+
+	IncommingCurrentProperty,
+	LastErrorNumberProperty
 };
 static uint8_t PROPERTIES_TO_OBSERVE_COUNT = sizeof(PROPERTIES_TO_OBSERVE) / sizeof(ValloxProperty);
 
@@ -290,6 +353,17 @@ ClickButton BoostButton(BOOST_BUTTON_PIN, LOW, CLICKBTN_PULLUP);
 bool boostModeActive = false;
 unsigned long boostEndMillis = 0;
 uint8_t boostRemainingMinutes = 0;
+
+// cached values
+int8_t lastFanSpeedValue;
+int8_t lastTempInsideValue;
+int8_t lastTempOutsideValue;
+int8_t lastTempExhaustValue;
+int8_t lastTempIncommingValue;
+
+int8_t lastInEfficiencyValue;
+int8_t lastOutEfficiencyValue;
+int8_t lastAverageEfficiencyValue;
 
 //-------------------------------------------------------------------------------------------------
 // Note that AltSoftSerial uses RX=8 TX=9 PIN 10 is unsusable!
@@ -322,7 +396,7 @@ void setupSerials(Stream** ppRxStream, Stream** ppTxStream)
 void setupSensor()
 {
 	gw.begin(incomingMessage, AUTO, true);
-	gw.sendSketchInfo("Vallox Digit SE", "1.1");
+	gw.sendSketchInfo("Vallox Digit SE", "2.1");
 
 	for (uint8_t i = 0; i < CHILD_SENSORS_COUNT; i++)
 	{
@@ -429,48 +503,59 @@ void onPropertyChanged(ValloxProperty propertyId, int8_t value)
 {
 	switch (propertyId)
 	{
+		// cached values
 	case FanSpeedProperty:
 	{
 		sendMessage(FAN_SPEED, value);
+		lastFanSpeedValue = value;
 		break;
 	}
 	case TempInsideProperty:
 	{
 		sendMessage(TEMP_INSIDE, value);
+		lastTempInsideValue = value;
 		break;
 	}
 	case TempOutsideProperty:
 	{
 		sendMessage(TEMP_OUTSIDE, value);
+		lastTempOutsideValue = value;
 		break;
 	}
 	case TempExhaustProperty:
 	{
 		sendMessage(TEMP_EXHAUST, value);
+		lastTempExhaustValue = value;
 		break;
 	}
 	case TempIncommingProperty:
 	{
 		sendMessage(TEMP_INCOMMING, value);
+		lastTempIncommingValue = value;
 		break;
 	}
 
 	case InEfficiencyProperty:
 	{
 		sendMessage(EFFICIENCY_IN, value);
+		lastInEfficiencyValue = value;
 		break;
 	}
 	case OutEfficiencyProperty:
 	{
 		sendMessage(EFFICIENCY_OUT, value);
+		lastOutEfficiencyValue = value;
 		break;
 	}
 	case AverageEfficiencyProperty:
 	{
 		sendMessage(EFFICIENCY_AVERAGE, value);
+		lastAverageEfficiencyValue = value;
 		break;
 	}
 
+
+	// non cahced values
 	case PowerStateProperty:
 	{
 		sendMessage(POWER_STATE, value);
@@ -631,6 +716,51 @@ void onPropertyChanged(ValloxProperty propertyId, int8_t value)
 		sendMessage(SERVICE_REMINDER, value);
 		break;
 	}
+	case PostHeatingOnProperty:
+	{
+		sendMessage(POST_HEATING_ON, value);
+		break;
+	}
+	case DamperMotorPositionProperty:
+	{
+		sendMessage(DAMPER_MOTOR_POSITION, value);
+		break;
+	}	
+	case FaultSignalRelayProperty:
+	{
+		sendMessage(FAULT_SIGNAL_RELAY, value);
+		break;
+	}
+	case SupplyFanOffProperty:
+	{
+		sendMessage(SUPPLY_FAN_OFF, value);
+		break;
+	}
+	case PreHeatingOnProperty:
+	{
+		sendMessage(PRE_HEATING_ON, value);
+		break;
+	}
+	case ExhaustFanOffProperty:
+	{
+		sendMessage(EXHAUST_FAN_OFF, value);
+		break;
+	}
+	case FirePlaceBoosterOnProperty:
+	{
+		sendMessage(FIRE_PLACE_BOOSTER_ON, value);
+		break;
+	}
+	case IncommingCurrentProperty:
+	{
+		sendMessage(INCOMMING_CURRENT, value);
+		break;
+	}
+	case LastErrorNumberProperty:
+	{
+		sendMessage(LAST_ERROR_NUMBER, value);
+		break;
+	}
 
 	default:
 #ifdef PRINT_RECEIVED_PROPERTIES
@@ -754,6 +884,87 @@ void incomingMessage(const MyMessage &message)
 		valloxSerial.setDCFanOutputAdjustment(requestedLevel);
 	}
 
+	if (message.sensor == INPUT_FAN_STOP_THRESHOLD && message.type == V_DIMMER)
+	{
+		int requestedLevel = atoi(message.data);
+
+#ifdef 	PRINT_TX_PROPERTIES
+		int8_t currentLevel = valloxSerial.getValue(InputFanStopThresholdProperty);
+
+		Serial.print("Changing input fan stop temperature setpoint from ");
+		Serial.print(currentLevel);
+		Serial.print(", to ");
+		Serial.println(requestedLevel);
+#endif
+
+		valloxSerial.setInputFanStopThreshold(requestedLevel);
+	}
+
+	if (message.sensor == HEATING_SET_POINT && message.type == V_DIMMER)
+	{
+		int requestedLevel = atoi(message.data);
+
+#ifdef 	PRINT_TX_PROPERTIES
+		int8_t currentLevel = valloxSerial.getValue(HeatingSetPointProperty);
+
+		Serial.print("Changing heating temperature setpoint from ");
+		Serial.print(currentLevel);
+		Serial.print(", to ");
+		Serial.println(requestedLevel);
+#endif
+
+		valloxSerial.setHeatingSetPoint(requestedLevel);
+	}
+	
+	if (message.sensor == PRE_HEATING_SET_POINT && message.type == V_DIMMER)
+	{
+		int requestedLevel = atoi(message.data);
+
+#ifdef 	PRINT_TX_PROPERTIES
+		int8_t currentLevel = valloxSerial.getValue(PreHeatingSetPointProperty);
+
+		Serial.print("Changing preheating temperature setpoint from ");
+		Serial.print(currentLevel);
+		Serial.print(", to ");
+		Serial.println(requestedLevel);
+#endif
+
+		valloxSerial.setPreHeatingSetPoint(requestedLevel);
+	}
+	
+	if (message.sensor == CELL_DEFROSTING_THRESHOLD && message.type == V_DIMMER)
+	{
+		int requestedLevel = atoi(message.data);
+
+#ifdef 	PRINT_TX_PROPERTIES
+		int8_t currentLevel = valloxSerial.getValue(CellDefrostingThresholdProperty);
+
+		Serial.print("Changing cell defrosting temperature setpoint from ");
+		Serial.print(currentLevel);
+		Serial.print(", to ");
+		Serial.println(requestedLevel);
+#endif
+
+		valloxSerial.setCellDefrostingThreshold(requestedLevel);
+	}
+	
+	if (message.sensor == HRC_BYPASS_THRESHOLD && message.type == V_DIMMER)
+	{
+		int requestedLevel = atoi(message.data);
+
+#ifdef 	PRINT_TX_PROPERTIES
+		int8_t currentLevel = valloxSerial.getValue(HrcBypassThresholdProperty);
+
+		Serial.print("Changing HRC bypass temperature setpoint from ");
+		Serial.print(currentLevel);
+		Serial.print(", to ");
+		Serial.println(requestedLevel);
+#endif
+
+		valloxSerial.setHrcBypassThreshold(requestedLevel);
+	}
+
+
 	if (message.sensor == BOOST_SWITCH && message.type == V_DIMMER)
 	{
 		int minutes = atoi(message.data);
@@ -876,7 +1087,28 @@ void setup()
 	setupSensor();
 	setupVallox(pRxStream, pTxStream);
 	setupBoostButton();
+
+#ifdef OPTION_USE_TIMER
+	/*int tickEvent1 = */timer.every(TEMP_UPDATE_INTERVAL, sendValuesTimerHandler);
+	Serial.println("Started cyclic update timer.");
+#endif
 }
+
+#ifdef OPTION_USE_TIMER
+void sendValuesTimerHandler()
+{
+	Serial.println("Sending cached values:");
+	sendMessage(FAN_SPEED, lastFanSpeedValue);
+	sendMessage(TEMP_INSIDE, lastTempInsideValue);
+	sendMessage(TEMP_OUTSIDE, lastTempOutsideValue);
+	sendMessage(TEMP_EXHAUST, lastTempExhaustValue);
+	sendMessage(TEMP_INCOMMING, lastTempIncommingValue);
+
+	sendMessage(EFFICIENCY_IN, lastInEfficiencyValue);
+	sendMessage(EFFICIENCY_OUT, lastOutEfficiencyValue);
+	sendMessage(EFFICIENCY_AVERAGE, lastAverageEfficiencyValue);
+}
+#endif
 
 //-------------------------------------------------------------------------------------------------
 void loop()
@@ -955,6 +1187,8 @@ void loop()
 	}
 
 	updateBoostTime();
+
+#ifdef OPTION_USE_TIMER
+	timer.update();
+#endif
 }
-
-
