@@ -94,6 +94,7 @@ MyMessage tempMsg(TEMP_CHILD, V_TEMP);
 MyMessage pressureMsg(BARO_CHILD, V_PRESSURE);
 MyMessage forecastMsg(BARO_CHILD, V_FORECAST);
 MyMessage situationMsg(BARO_CHILD, V_VAR1);
+MyMessage forecastMsg2(BARO_CHILD, V_VAR2);
 
 void displaySensorDetails(void)
 {
@@ -130,7 +131,7 @@ void initHumiditySensor()
 void setup() 
 {
 	gw.begin();
-	gw.sendSketchInfo("Weather Station Sensor", "2.0");
+	gw.sendSketchInfo("Weather Station Sensor", "2.1");
 
 	initPressureSensor();
 	initHumiditySensor();
@@ -241,7 +242,13 @@ bool updatePressureSensor()
 			lastForecast = forecast;
 			Serial.print(F("Forecast = "));
 			Serial.println(weatherStrings[forecast]);
-			if (!gw.send(forecastMsg.set(weatherStrings[lastForecast])))
+			if (gw.send(forecastMsg.set(weatherStrings[lastForecast])))
+			{
+				if (!gw.send(forecastMsg2.set(lastForecast)))
+				{
+				}
+			}
+			else
 			{
 				lastForecast = -1.0;
 			}
