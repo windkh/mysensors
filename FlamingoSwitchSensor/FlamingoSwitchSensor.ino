@@ -59,9 +59,7 @@ Timer timer;
 
 //-----------------------------------------------------------------------------
 // MySensor
-#define CE_PIN			 9  // orange 
-#define CS_PIN           10 // yellow
-MySensor gw(CE_PIN, CS_PIN);
+MySensor gw;
 
 //-----------------------------------------------------------------------------
 FlamingoSwitch Switch;
@@ -111,7 +109,7 @@ Device DEVICE_CODES[DEVICES] =
 	}
 };
 
-const int BAUDRATE = 115200;
+#define BAUDRATE 115200
 
 void send(uint32_t code)
 {
@@ -172,7 +170,7 @@ void readTemperature()
 	tempSensors.requestTemperatures();
 
 	float temperature = static_cast<float>(static_cast<int>(tempSensors.getTempCByIndex(0) * 10.)) / 10.;
-	if (temperature > 0 && temperature < 80)
+	if (!isnan(temperature) && temperature > 0 && temperature < 80)
 	{
 		Serial.print("T2: ");
 		Serial.print(temperature, 1);
@@ -191,6 +189,7 @@ void readHumidity()
 	{
 		Serial.println("Failed reading temperature from DHT");
 	}
+	else
 	//else if (temperature != lastTemp)
 	{
 		lastTemp = temperature;
@@ -205,6 +204,7 @@ void readHumidity()
 	{
 		Serial.println("Failed reading humidity from DHT");
 	}
+	else
 	//else if (humidity != lastHum)
 	{
 		lastHum = humidity;
@@ -238,7 +238,8 @@ void setup()
 		Serial.println(tempCount, DEC);
 
 		gw.present(SENSOR_ID_TEMP, S_TEMP);
-		int tickEvent = timer.every(TEMP_UPDATE_INTERVAL, onTimer);
+		//int tickEvent = 
+		timer.every(TEMP_UPDATE_INTERVAL, onTimer);
 	}
 
 	// DHT Sensor
