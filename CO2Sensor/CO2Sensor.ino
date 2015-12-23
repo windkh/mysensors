@@ -35,13 +35,12 @@ GND     braun
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BMP085_U.h>
 
-#include "RunningAverage.h"
+//#include "RunningAverage.h"
 
 #include <DHT.h>  
 #include <MQ135.h>
 
 #include "Timer.h"
-
 
 const float SEALEVEL = 688; // Westendorf
 const float SEALEVEL_PRESSURE = 1013.25;
@@ -149,7 +148,7 @@ int lastC02;
 int lastCO2Corrected;
 float lastR0;
 
-RunningAverage lastCO2Values(CO2_SENSOR_BUFFER_SIZE);
+//RunningAverage lastCO2Values(CO2_SENSOR_BUFFER_SIZE);
 
 //-----------------------------------------------------------------------------
 // MySensor
@@ -201,8 +200,8 @@ void setup()
     Serial.println(F(""));
 
     gasSensor.setR0(R0);
-    float ppm = gasSensor.getPPM();
-    lastCO2Values.fillValue(ppm, CO2_SENSOR_BUFFER_SIZE);
+    //float ppm = gasSensor.getPPM();
+    //lastCO2Values.fillValue(ppm, CO2_SENSOR_BUFFER_SIZE);
 
     //int tickEvent1 = 
     timer.every(TEMP_UPDATE_INTERVAL, timerHandler);
