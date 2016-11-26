@@ -1,9 +1,15 @@
-/*
+/* (c) windkh 2016
+MySensors 2.0
 Arduino nano
-CO2 MySensor
-
+CO2 Sensor
 MQ135
 DHT22
+BMP 085
+
+Requires the following libraries
+MQ135.h from https://github.com/GeorgK/MQ135 or the foork from https://github.com/rstoica/MQ135
+Adafruit_Sensor.h https://github.com/adafruit/Adafruit_Sensor
+Adafruit_BMP085_U.h https://github.com/adafruit/Adafruit_BMP085_Unified
 
 PIN 2   grau            NRF IRQ
 PIN 3   gruen           DHT22 PIN 2
@@ -26,10 +32,28 @@ A0      weiss
 D0      schwarz unbelegt
 GND     braun
 5V      rot
+
+BMP085
+A4		braun			SDA 
+A5		blau			SCL 
+
 */
 
+#define MY_DEBUG_VERBOSE
+#define MY_SPECIAL_DEBUG
+
+// Enable debug prints to serial monitor
+#define MY_DEBUG 
+
+// Enable and select radio type attached
+#define MY_RADIO_NRF24
+
+// Enabled repeater feature for this node
+#define MY_REPEATER_FEATURE
+
+
 #include <SPI.h>
-#include <MySensor.h>
+#include <MySensors.h> 
 
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
@@ -143,7 +167,7 @@ MyMessage msgTemp(CHILD_ID_TEMP, V_TEMP);
 #define RZERO 300.0
 #define EEPROM_R0 0
 
-MQ135 gasSensor = MQ135(CO2_SENSOR_ANALOG_PIN, RZERO);
+MQ135 gasSensor = MQ135(CO2_SENSOR_ANALOG_PIN);
 int lastC02;
 int lastCO2Corrected;
 float lastR0;
@@ -152,13 +176,12 @@ float lastR0;
 
 //-----------------------------------------------------------------------------
 // MySensor
-MySensor gw;
 MyMessage msgCO2Corrected(CHILD_ID_CO2_CORRECTED, V_VAR1);
 MyMessage msgCO2(CHILD_ID_CO2, V_VAR1);
 MyMessage msgR0(CHILD_ID_R0, V_VAR1);
 
 //-----------------------------------------------------------------------------
-void setup()
+void presentation()
 {
     dht.setup(HUMIDITY_SENSOR_DIGITAL_PIN);
 
@@ -171,18 +194,17 @@ void setup()
         while (1) {}
     }
 
-    gw.begin(incomingMessage, AUTO, true);
-    gw.sendSketchInfo("CO2 Sensor MQ-135", "1.3");
-    gw.present(CHILD_ID_CO2_CORRECTED, S_AIR_QUALITY);
-    gw.present(CHILD_ID_CO2, S_AIR_QUALITY);
-    gw.present(CHILD_ID_TEMP, S_TEMP);
-    gw.present(CHILD_ID_HUM, S_HUM);
-    gw.present(CHILD_ID_R0, S_CUSTOM);
-    gw.present(CHILD_ID_BARO, S_BARO);
-    gw.present(CHILD_ID_BARO_TEMP, S_TEMP);
+    sendSketchInfo("CO2 Sensor MQ-135 DHT-22 BMP085", "2.0");
+    present(CHILD_ID_CO2_CORRECTED, S_AIR_QUALITY);
+    present(CHILD_ID_CO2, S_AIR_QUALITY);
+    present(CHILD_ID_TEMP, S_TEMP);
+    present(CHILD_ID_HUM, S_HUM);
+    present(CHILD_ID_R0, S_CUSTOM);
+    present(CHILD_ID_BARO, S_BARO);
+    present(CHILD_ID_BARO_TEMP, S_TEMP);
     
 
-    uint8_t R02 = gw.loadState(EEPROM_R0);
+    uint8_t R02 = loadState(EEPROM_R0);
 
     // get R0 from EEPROM
     float R0 = R02 * 2;
@@ -199,7 +221,7 @@ void setup()
     Serial.print(R0);
     Serial.println(F(""));
 
-    gasSensor.setR0(R0);
+	gasSensor.setRZero(R0);
     //float ppm = gasSensor.getPPM();
     //lastCO2Values.fillValue(ppm, CO2_SENSOR_BUFFER_SIZE);
 
@@ -396,11 +418,11 @@ void timerHandler()
     
     if (humidityChanged || airQualityChanged)
     {
-        gw.send(msgTemp.set(lastTemp, 1));
-        gw.send(msgHum.set(lastHum, 1));
-        gw.send(msgCO2Corrected.set(lastCO2Corrected));
-        gw.send(msgCO2.set(lastC02));
-        gw.send(msgR0.set(lastR0, 2));
+        send(msgTemp.set(lastTemp, 1));
+        send(msgHum.set(lastHum, 1));
+        send(msgCO2Corrected.set(lastCO2Corrected));
+        send(msgCO2.set(lastC02));
+        send(msgR0.set(lastR0, 2));
     }
 }
 
@@ -410,17 +432,15 @@ void pressureTimerHandler()
 
     if (pressureChanged) 
     {
-        gw.send(tempMsg.set(lastBaroTemp, 1));
-        gw.send(pressureMsg.set(lastPressure, 1));
-        gw.send(forecastMsg.set(weather[lastForecast]));
-        gw.send(situationMsg.set(lastSituation, 0));
+        send(tempMsg.set(lastBaroTemp, 1));
+        send(pressureMsg.set(lastPressure, 1));
+        send(forecastMsg.set(weather[lastForecast]));
+        send(situationMsg.set(lastSituation, 0));
     }
 }
 
 void loop()
 {
-    gw.process();
-
     timer.update();
 }
 
@@ -442,9 +462,9 @@ void incomingMessage(const MyMessage& message)
         Serial.print(R0);
         Serial.println(F(""));
 
-        gw.saveState(EEPROM_R0, (uint8_t)(R0/2));
-        gasSensor.setR0(R0);
-        gw.send(msgR0.set(R0, 2));
+        saveState(EEPROM_R0, (uint8_t)(R0/2));
+		gasSensor.setRZero(R0);
+        send(msgR0.set(R0, 2));
     }
 }
 

@@ -12,7 +12,7 @@ The sketch registeres a sensor 0 which reports all received codes. This one can 
 or to send incomming codes directly into the air.
 The sensors 1-4 are hardcoded switches. You have to enter your codes from the remote control in the table 
 DEVICE_CODES first. Every button on the remote control sends 4 different keys. Though only one is required 
-the sketch is able to send all 4 after each other. All states are written into the eeprom. On restart thesketch will 
+the sketch is able to send all 4 after each other. All states are written into the eeprom. On restart the sketch will 
 restore the switch states based on the saved values.
 
 Repeater
@@ -20,25 +20,41 @@ Repeater
 Temperature 18B20
 */
 
+#define MY_DEBUG_VERBOSE
+#define MY_SPECIAL_DEBUG
+
+// Enable debug prints to serial monitor
+#define MY_DEBUG 
+
+// Enable and select radio type attached
+#define MY_RADIO_NRF24
+
+// Enabled repeater feature for this node
+#define MY_REPEATER_FEATURE
+
 #include "FlamingoSwitch.h"
-#include <MySensor.h> 
+#include <MySensors.h> 
 #include <SPI.h>
 #include <EEPROM.h>  
 
-#include <DallasTemperature.h>
-#include <OneWire.h>
+//#include <DallasTemperature.h>
+//#include <OneWire.h>
 
 #include <DHT.h>  
 
 #include "Timer.h"
 
+
 //-----------------------------------------------------------------------------
 // Dallas 18B20
-#define ONE_WIRE_BUS 5 // Pin where dallas sensor is connected 
-OneWire oneWire(ONE_WIRE_BUS);
-DallasTemperature tempSensors(&oneWire);
-#define SENSOR_ID_TEMP 10 
-#define TEMP_UPDATE_INTERVAL 60000
+//#define ONE_WIRE_BUS 5 // Pin where dallas sensor is connected 
+//OneWire oneWire(ONE_WIRE_BUS);
+//DallasTemperature tempSensors(&oneWire);
+//#define SENSOR_ID_TEMP 10 
+//uint8_t TempSensorCount = 0;
+
+// Timer
+#define SENSOR_UPDATE_INTERVAL 60000
 
 //-----------------------------------------------------------------------------
 // DHT22
@@ -58,10 +74,6 @@ MyMessage msgTemp(CHILD_ID_TEMP, V_TEMP);
 Timer timer;
 
 //-----------------------------------------------------------------------------
-// MySensor
-MySensor gw;
-
-//-----------------------------------------------------------------------------
 FlamingoSwitch Switch;
 
 const int TX_PIN  = 4;
@@ -74,7 +86,6 @@ const int IRQ_PIN = 1; // PIN 3;
 #define CODES_PER_DEVICE 4		/* Amount of codes stored per A-D*/
 
 int Counter = 0;
-
 
 // the remote control sends 4 different codes of each state.
 struct Codes
@@ -160,27 +171,30 @@ void send(uint8_t device, uint8_t state)
 // timer handler to read and send temperature
 void onTimer()
 {
-	readTemperature();
+//	readTemperature();
 	readHumidity();
 }
 
-// timer handler to read and send temperature
-void readTemperature()
-{
-	tempSensors.requestTemperatures();
-
-	float temperature = static_cast<float>(static_cast<int>(tempSensors.getTempCByIndex(0) * 10.)) / 10.;
-	if (!isnan(temperature) && temperature > 0 && temperature < 80)
-	{
-		Serial.print("T2: ");
-		Serial.print(temperature, 1);
-		Serial.println(" C");
-
-		MyMessage msg(SENSOR_ID_TEMP, V_TEMP);
-		msg.set(temperature, 1);
-		gw.send(msg);
-	}
-}
+//// timer handler to read and send temperature
+//void readTemperature()
+//{
+//	if (TempSensorCount > 0)
+//	{
+//		tempSensors.requestTemperatures();
+//
+//		float temperature = static_cast<float>(static_cast<int>(tempSensors.getTempCByIndex(0) * 10.)) / 10.;
+//		if (!isnan(temperature) && temperature > 0 && temperature < 80)
+//		{
+//			Serial.print("T2: ");
+//			Serial.print(temperature, 1);
+//			Serial.println(" C");
+//
+//			MyMessage msg(SENSOR_ID_TEMP, V_TEMP);
+//			msg.set(temperature, 1);
+//			send(msg);
+//		}
+//	}
+//}
 
 void readHumidity()
 {
@@ -196,7 +210,7 @@ void readHumidity()
 		Serial.print("T: ");
 		Serial.print(temperature);
 		Serial.println(" C");
-		gw.send(msgTemp.set(lastTemp, 1));
+		send(msgTemp.set(lastTemp, 1));
 	}
 
 	float humidity = dht.getHumidity();
@@ -211,69 +225,71 @@ void readHumidity()
 		Serial.print("H: ");
 		Serial.print(humidity);
 		Serial.println(" \%");
-		gw.send(msgHum.set(lastHum, 1));
+		send(msgHum.set(lastHum, 1));
 	}
 }
 
+
 // setup serial communication, initialize the pins for communication between arduino and rx and tx units.
 // Announce sensor 0 and sensor 1..n
-void setup()
+void presentation() 
 {
 	Serial.begin(BAUDRATE);
+	sendSketchInfo("Flamingo Switch Sensor & Repeater", "2.0");
 
 	// setup 433Mhz
 	Switch.enableReceive(IRQ_PIN);
 	Switch.enableTransmit(TX_PIN);
 
-	// setup sensor as repeater
-	gw.begin(incomingMessage, AUTO, true);
-	gw.sendSketchInfo("Flamingo Switch Sensor & Repeater", "1.1");
+	//// setup temp sensor
+	//tempSensors.begin();
+	//TempSensorCount = tempSensors.getDeviceCount();
+	//if (TempSensorCount >= 1)
+	//{
+	//	Serial.print("Temperature sensor online. ");
+	//	Serial.println(TempSensorCount, DEC);
 
-	// setup temp sensor
-	tempSensors.begin();
-	uint8_t  tempCount = tempSensors.getDeviceCount();
-	if (tempCount >= 1)
-	{
-		Serial.print("Temperature sensor online. ");
-		Serial.println(tempCount, DEC);
-
-		gw.present(SENSOR_ID_TEMP, S_TEMP);
-		//int tickEvent = 
-		timer.every(TEMP_UPDATE_INTERVAL, onTimer);
-	}
+	//	present(SENSOR_ID_TEMP, S_TEMP);
+	//}
+	//else
+	//{
+	//	Serial.println("No temperature sensors found.");
+	//}
 
 	// DHT Sensor
 	dht.setup(HUMIDITY_SENSOR_DIGITAL_PIN);
-	gw.present(CHILD_ID_TEMP, S_TEMP);
-	gw.present(CHILD_ID_HUM, S_HUM);
+	present(CHILD_ID_TEMP, S_TEMP);
+	present(CHILD_ID_HUM, S_HUM);
 
 	// id 0 is a general rx tx sensor, it announces the received code and sends the one comming from the controller.
 	{
-		gw.present(0, S_CUSTOM);
+		present(0, S_CUSTOM);
 		MyMessage message(0, V_VAR1);
 		message.set(0);
-		gw.send(message);
+		send(message);
 	}
 
 	// id 0..n are predefined switches with hardcoded codes.
 	for (uint8_t i = 0; i < DEVICES; i++)
 	{
 		uint8_t sensorId = i + 1; // sensor 0 is a generic send / receive device
-		gw.present(sensorId, S_LIGHT);
-		bool state = gw.loadState(i);
+		present(sensorId, S_LIGHT);
+		bool state = loadState(i);
 		send(i, state); 
 
 		MyMessage message(sensorId, V_LIGHT);
 		message.set(state);
-		gw.send(message);
+		send(message);
 	}
+
+	// Start timer to read hum and temp.
+	//int tickEvent = 
+	timer.every(SENSOR_UPDATE_INTERVAL, onTimer);
 }
 
 // processes my sensors data. Receives codes and sends them to the mysensors controller.
 void loop()
 {
-	gw.process();
-
 	if (Switch.available())
 	{
 		unsigned long code = Switch.getReceivedValue();
@@ -286,7 +302,7 @@ void loop()
 
 		MyMessage message(0, V_VAR1);
 		message.set(code);
-		gw.send(message);
+		send(message);
 
 		Switch.resetAvailable();
 	}
@@ -297,7 +313,7 @@ void loop()
 // imcomming message handler.
 // 0: sensor directly transmits the values received from the mysensors controller.
 // 1..n: the switch is turned on/off with the predefined codes. 
-void incomingMessage(const MyMessage& message)
+void receive(const MyMessage& message)
 {
 	if (message.isAck()) 
 	{
@@ -317,7 +333,7 @@ void incomingMessage(const MyMessage& message)
 
 		MyMessage message(sensor, V_VAR1);
 		message.set(state);
-		gw.send(message);
+		send(message);
 	}
 	else
 	{
@@ -332,11 +348,11 @@ void incomingMessage(const MyMessage& message)
 		{
 			bool state = message.getBool();
 			send(sensor-1, state); // -1 as we start counting the sensors at 1 instead of 0
-			gw.saveState(sensor, state);
+			saveState(sensor, state);
 
 			MyMessage message(sensor, V_LIGHT);
 			message.set(state);
-			gw.send(message);
+			send(message);
 		}
 	}
 }
