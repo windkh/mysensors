@@ -444,7 +444,7 @@ void loop()
     timer.update();
 }
 
-void incomingMessage(const MyMessage& message)
+void receive(const MyMessage &message)
 {
     Serial.println(F("Incoming Message:"));
 
