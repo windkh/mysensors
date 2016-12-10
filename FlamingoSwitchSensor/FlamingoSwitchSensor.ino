@@ -1,12 +1,15 @@
 /* (c) windkh 2015
-Flamingo Switch Sensor for see www.mysensors.org
+MySensors 2.0
+Flamingo Switch Sensor (Repeater)
 required hardware:
 - 1x Arduino
 - 1x Radio NRF24L01+
-- 1x 433MHz Receiver
+- (1x 433MHz Receiver) (optional)
 - 1x 433Mhz Sender
+- 1x DHT-22
 connect PIN3 to receiver unit Data-PIN
-connect PIN4 to sender unit Data-PIN
+(connect PIN4 to sender unit Data-PIN) (optional)
+connect PIN5 to DHT-22
 
 The sketch registeres a sensor 0 which reports all received codes. This one can be used to sniff for codes, 
 or to send incomming codes directly into the air.
@@ -14,10 +17,6 @@ The sensors 1-4 are hardcoded switches. You have to enter your codes from the re
 DEVICE_CODES first. Every button on the remote control sends 4 different keys. Though only one is required 
 the sketch is able to send all 4 after each other. All states are written into the eeprom. On restart the sketch will 
 restore the switch states based on the saved values.
-
-Repeater
-
-Temperature 18B20
 */
 
 #define MY_DEBUG_VERBOSE
@@ -37,22 +36,12 @@ Temperature 18B20
 #include <SPI.h>
 #include <EEPROM.h>  
 
-//#include <DallasTemperature.h>
-//#include <OneWire.h>
-
 #include <DHT.h>  
 
 #include "Timer.h"
 
 
 //-----------------------------------------------------------------------------
-// Dallas 18B20
-//#define ONE_WIRE_BUS 5 // Pin where dallas sensor is connected 
-//OneWire oneWire(ONE_WIRE_BUS);
-//DallasTemperature tempSensors(&oneWire);
-//#define SENSOR_ID_TEMP 10 
-//uint8_t TempSensorCount = 0;
-
 // Timer
 #define SENSOR_UPDATE_INTERVAL 60000
 
@@ -60,14 +49,13 @@ Temperature 18B20
 // DHT22
 #define CHILD_ID_TEMP 11
 #define CHILD_ID_HUM 12
-#define HUMIDITY_SENSOR_DIGITAL_PIN 3
+#define HUMIDITY_SENSOR_DIGITAL_PIN 5
 
 DHT dht;
 float lastTemp;
 float lastHum;
 MyMessage msgHum(CHILD_ID_HUM, V_HUM);
 MyMessage msgTemp(CHILD_ID_TEMP, V_TEMP);
-
 
 //-----------------------------------------------------------------------------
 // Timer
@@ -77,15 +65,14 @@ Timer timer;
 FlamingoSwitch Switch;
 
 const int TX_PIN  = 4;
-const int IRQ_PIN = 1; // PIN 3;
+const int IRQ_PIN = 1; // IRQ1 = PIN 3 on Arduino Uno
 
 #define OFF 0
 #define ON  1
 
 #define DEVICES	 4				/* Amount of units supported per remote control A-D*/
 #define CODES_PER_DEVICE 4		/* Amount of codes stored per A-D*/
-
-int Counter = 0;
+#define DELAY 50                /* Delay in ms between code transmissions */
 
 // the remote control sends 4 different codes of each state.
 struct Codes
@@ -157,44 +144,29 @@ void send(uint8_t device, uint8_t state)
 	Serial.print(state);
 	Serial.println();
 
-	int i = Counter++ % CODES_PER_DEVICE;
 	if (state == OFF)
 	{
-		send(DEVICE_CODES[device].Off.Code[i]);		
+		for (int i = 0; i < CODES_PER_DEVICE; i++)
+		{
+			send(DEVICE_CODES[device].Off.Code[3-i]);
+			delay(DELAY);
+		}
 	}
 	else
 	{
-		send(DEVICE_CODES[device].On.Code[i]);
+		for (int i = 0; i < CODES_PER_DEVICE; i++)
+		{
+			send(DEVICE_CODES[device].On.Code[3-i]);
+			delay(DELAY);
+		}
 	}
 }
 
 // timer handler to read and send temperature
 void onTimer()
 {
-//	readTemperature();
 	readHumidity();
 }
-
-//// timer handler to read and send temperature
-//void readTemperature()
-//{
-//	if (TempSensorCount > 0)
-//	{
-//		tempSensors.requestTemperatures();
-//
-//		float temperature = static_cast<float>(static_cast<int>(tempSensors.getTempCByIndex(0) * 10.)) / 10.;
-//		if (!isnan(temperature) && temperature > 0 && temperature < 80)
-//		{
-//			Serial.print("T2: ");
-//			Serial.print(temperature, 1);
-//			Serial.println(" C");
-//
-//			MyMessage msg(SENSOR_ID_TEMP, V_TEMP);
-//			msg.set(temperature, 1);
-//			send(msg);
-//		}
-//	}
-//}
 
 void readHumidity()
 {
@@ -235,26 +207,11 @@ void readHumidity()
 void presentation() 
 {
 	Serial.begin(BAUDRATE);
-	sendSketchInfo("Flamingo Switch Sensor & Repeater", "2.0");
+	sendSketchInfo("Flamingo Switch", "2.0");
 
 	// setup 433Mhz
 	Switch.enableReceive(IRQ_PIN);
 	Switch.enableTransmit(TX_PIN);
-
-	//// setup temp sensor
-	//tempSensors.begin();
-	//TempSensorCount = tempSensors.getDeviceCount();
-	//if (TempSensorCount >= 1)
-	//{
-	//	Serial.print("Temperature sensor online. ");
-	//	Serial.println(TempSensorCount, DEC);
-
-	//	present(SENSOR_ID_TEMP, S_TEMP);
-	//}
-	//else
-	//{
-	//	Serial.println("No temperature sensors found.");
-	//}
 
 	// DHT Sensor
 	dht.setup(HUMIDITY_SENSOR_DIGITAL_PIN);
