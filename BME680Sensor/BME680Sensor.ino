@@ -8,13 +8,23 @@ required hardware:
 
 required libraries:
   https://github.com/DFRobot/DFRobot_BME680
+
+Notes on AirQuality output:
+IAQ index value is between 0-500
+  0-50  good
+ 51-100 average
+101-150 little bad
+151-200 bad
+201-300 worse
+301-500 very bad
+--> TODO: right now this IAQ index is missing in the code
 */
 
-//#define MY_DEBUG_VERBOSE
-//#define MY_SPECIAL_DEBUG
+#define MY_DEBUG_VERBOSE
+#define MY_SPECIAL_DEBUG
 
 // Enable debug prints to serial monitor
-// #define MY_DEBUG 
+#define MY_DEBUG 
 
 // Enable and select radio type attached
 #define MY_RADIO_NRF24
@@ -96,7 +106,6 @@ void initSensor()
 void updateSensor(void)
 {
 	bme.startConvert();					  //to get a accurate values
-	delay(1);
 	Serial.println();
 
 	// Temperature ----------------------------------------------------------------------------------------------------
@@ -113,6 +122,7 @@ void updateSensor(void)
 		}
 	}
 
+
 	// Humidity -------------------------------------------------------------------------------------------------------
 	float humidity = bme.readHumidity();  //float humidity, Unit relative humidity, this is account to two decimal places
 	if (lastHum != humidity)
@@ -126,6 +136,7 @@ void updateSensor(void)
 			lastTemp = -1.0;
 		}
 	}
+
 
 	// Pressure -------------------------------------------------------------------------------------------------------
 	float absolutePressure = bme.readPressure();  //float pressure, Unit Unit MPa, this is account to two decimal places
@@ -142,6 +153,7 @@ void updateSensor(void)
 		}
 	}
 
+
 	// float altitude = bme.readAltitude();  //float altitude, Unit metre, this is account to one decimal places
 	// This is not the absolute Altitude, but one calculated using a global atmospheric formula.
 
@@ -152,13 +164,14 @@ void updateSensor(void)
 		lastAirQuality = gas;
 		Serial.print(F("gas = "));
 		Serial.print(lastAirQuality);
-		Serial.println(F(" ppm"));
+		Serial.println(F(" ppm")); // <-- Note: maybe this unit is wrong
+
+		// Note: the value read from register 0x2A seems to be a raw gas resistance which is a 10Bit Value
 		if (!send(airQualityMsg.set(lastAirQuality, 1)))
 		{
 			lastAirQuality = -1.0;
 		}
 	}
-
 
 	// Resistance -----------------------------------------------------------------------------------------------------
 	float gasResistance = bme.readGasResistance();  //float resistance, Unit ohm, this is account to two decimal places
