@@ -37,11 +37,11 @@ IAQ index value is between 0-500
 
 BME680_Library bme680;
 
-bool sendAlways = true; // set this to false if you only want to send values when they are changed.
+bool sendAlways = false; // set this to false if you only want to send values when they are changed.
 
 const float SEALEVEL = 688; // meters above sealevel. We assume that this sensor is located at some static place
 const float SEALEVEL_PRESSURE = 1013.25;
-unsigned long SLEEP_TIME = 2000; // ms
+unsigned long SLEEP_TIME = 10000; // ms
 
 
 // ----------------------------------------------------------------------------
@@ -112,6 +112,7 @@ void updateSensor(void)
 	{
 		// Temperature ----------------------------------------------------------------------------------------------------
 		float temp = bme680.getTemperature();
+		temp = round1(temp);
 		if (lastTemp != temp || sendAlways)
 		{
 			lastTemp = temp;
@@ -127,6 +128,7 @@ void updateSensor(void)
 
 		// Humidity -------------------------------------------------------------------------------------------------------
 		float humidity = bme680.getRelativeHumidity();
+		humidity = round1(humidity);
 		if (lastHum != humidity || sendAlways)
 		{
 			lastHum = humidity;
@@ -143,6 +145,7 @@ void updateSensor(void)
 		// Pressure -------------------------------------------------------------------------------------------------------
 		float absolutePressure = bme680.getBarometricPressure();
 		float pressure = getSeaLevelPressure(SEALEVEL, absolutePressure);
+		pressure = round1(pressure);
 		if (lastPressure != pressure || sendAlways)
 		{
 			lastPressure = pressure;
@@ -162,6 +165,7 @@ void updateSensor(void)
 
 		// Gas Resistance -----------------------------------------------------------------------------------------------------
 		float gasResistance = bme680.getGasResistance();
+		gasResistance = round(gasResistance);
 		if (lastResistance != gasResistance || sendAlways)
 		{
 			lastResistance = gasResistance;
@@ -185,4 +189,12 @@ void updateSensor(void)
 float getSeaLevelPressure(float altitude, float absolutePressure)
 {
 	return absolutePressure / pow(1.0 - (altitude / 44330.0), 5.255);
+}
+
+// Simple round function for rounding to one decimal.
+float round1(float value)
+{
+	float multiplier = 10;
+	float temp = round(value * multiplier);
+	return temp / multiplier;
 }
