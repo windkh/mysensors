@@ -55,24 +55,25 @@ boolean metric = true;
 float lastHum = -1;
 float lastPressure = -1;
 float lastTemp = -1;
-float lastResistance = -1;
+uint32_t lastResistance = -1;
 
 MyMessage msgHum(CHILD_ID_HUM, V_HUM);
 MyMessage msgTemp(CHILD_ID_TEMP, V_TEMP);
 MyMessage pressureMsg(CHILD_ID_PRESSURE, V_PRESSURE);
-MyMessage resistanceMsg(CHILD_ID_RESISTANCE, V_VAR1);
-
+MyMessage resistanceMsg(CHILD_ID_RESISTANCE, V_LEVEL);
+MyMessage resistanceUnitMsg(CHILD_ID_RESISTANCE, V_UNIT_PREFIX);  // Custom unit message.
 
 void presentation()
 {
-	sendSketchInfo("BME680 Sensor", "2.0");
+	sendSketchInfo("BME680 Sensor", "2.1");
 
 	initSensor();
 
 	present(CHILD_ID_PRESSURE, S_BARO);
 	present(CHILD_ID_HUM, S_HUM);
 	present(CHILD_ID_TEMP, S_TEMP);
-	present(CHILD_ID_RESISTANCE, S_CUSTOM);
+	present(CHILD_ID_RESISTANCE, S_AIR_QUALITY);
+	send(resistanceUnitMsg.set("Ohm"));
 
 	metric = getConfig().isMetric;
 }
@@ -117,7 +118,7 @@ void updateSensor(void)
 		{
 			lastTemp = temp;
 			Serial.print(F("Temperature = "));
-			Serial.print(lastTemp);
+			Serial.print(lastTemp, 1);
 			Serial.println(metric ? F("*C") : F("*F"));
 			if (!send(msgTemp.set(lastTemp, 1)))
 			{
@@ -133,7 +134,7 @@ void updateSensor(void)
 		{
 			lastHum = humidity;
 			Serial.print(F("Humidity = "));
-			Serial.print(lastHum);
+			Serial.print(lastHum, 1);
 			Serial.println(F("%"));
 			if (!send(msgHum.set(lastHum, 1)))
 			{
@@ -145,14 +146,14 @@ void updateSensor(void)
 		// Pressure -------------------------------------------------------------------------------------------------------
 		float absolutePressure = bme680.getBarometricPressure();
 		float pressure = getSeaLevelPressure(SEALEVEL, absolutePressure);
-		pressure = round1(pressure);
+		pressure = round(pressure);
 		if (lastPressure != pressure || sendAlways)
 		{
 			lastPressure = pressure;
 			Serial.print(F("sealevel Pressure = "));
-			Serial.print(lastPressure);
+			Serial.print(lastPressure, 0);
 			Serial.println(F("hPa"));
-			if (!send(pressureMsg.set(lastPressure, 1)))
+			if (!send(pressureMsg.set(lastPressure, 0)))
 			{
 				lastPressure = -1.0;
 			}
@@ -164,18 +165,24 @@ void updateSensor(void)
 
 
 		// Gas Resistance -----------------------------------------------------------------------------------------------------
-		float gasResistance = bme680.getGasResistance();
-		gasResistance = round(gasResistance);
-		if (lastResistance != gasResistance || sendAlways)
+		uint32_t gasResistance = bme680.getGasResistance();
+		if (gasResistance != 0)
 		{
-			lastResistance = gasResistance;
-			Serial.print(F("R = "));
-			Serial.print(lastResistance);
-			Serial.println(F("Ohms"));
-			if (!send(resistanceMsg.set(lastResistance, 1)))
+			if (lastResistance != gasResistance || sendAlways)
 			{
-				lastResistance = -1.0;
+				lastResistance = gasResistance;
+				Serial.print(F("R = "));
+				Serial.print(lastResistance);
+				Serial.println(F("Ohms"));
+				if (!send(resistanceMsg.set(lastResistance)))
+				{
+					lastResistance = 0;
+				}
 			}
+		}
+		else
+		{
+			// The library returns 0 when reading the gas resistance was not successful.
 		}
 	}
 	else
