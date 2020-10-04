@@ -1,5 +1,16 @@
 // Example sketch showing how to send in OneWire temperature readings
-#include <MySensor.h>  
+
+#define MY_NODE_ID AUTO
+#define MY_DEBUG_VERBOSE
+#define MY_SPECIAL_DEBUG
+
+// Enable debug prints to serial monitor
+#define MY_DEBUG 
+
+// Enable and select radio type attached
+#define MY_RADIO_NRF24
+
+#include <MySensors.h>
 #include <SPI.h>
 #include <DallasTemperature.h>
 #include <OneWire.h>
@@ -11,7 +22,7 @@ int numSensors = 0; // detected sensors
 
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
-MySensor gw;
+
 float lastTemperature[SENSOR_COUNT];
 
 static unsigned long INTERVAL = 3000;
@@ -36,7 +47,7 @@ static uint8_t ADDRESSES[SENSOR_COUNT][ADDRESS_LENGTH]
 	{ 0x28, 0xD3, 0x58, 0xE5, 0x5, 0x0, 0x0, 0xD5 },
 };
 
-void setup()
+void presentation()
 {
 	sensors.begin();
 	
@@ -72,12 +83,11 @@ void setup()
 		Serial.println("");
 	}
 
-	gw.begin(NULL, AUTO, true);
-	gw.sendSketchInfo("Temperature Sensor", "1.3");
+	sendSketchInfo("Temperature Sensor", "2.0");
 
 	for (int i = 0; i < numSensors; i++)
 	{
-		gw.present(i, S_TEMP);
+		present(i, S_TEMP);
 	}
 }
 
@@ -85,8 +95,6 @@ void setup()
 
 void loop()
 {
-	gw.process();
-
 	if (millis() - previousMillis > INTERVAL)
 	{
 		previousMillis = millis();
@@ -103,12 +111,9 @@ void loop()
 			if (lastTemperature[i] != temperature && temperature != -127.00)
 			{
 				// Send in the new temperature
-				gw.send(msg.setSensor(i).set(temperature, 1));
+				send(msg.setSensor(i).set(temperature, 1));
 				lastTemperature[i] = temperature;
 			}
 		}
 	}
 }
-
-
-
