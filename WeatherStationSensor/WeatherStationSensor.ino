@@ -1,9 +1,30 @@
-// DHT-Sensor
-// BMP085 Sensor
+/* (c) windkh 2016
+MySensors 2.0
+WeatherStation Sensor with DHT22 and BMP180
+required hardware:
+- 1x Arduino
+- 1x Radio NRF24L01+
+- 1x BMP180 or BMP085
+- 1x DHT11
 
+required software
+https://github.com/adafruit/Adafruit_BMP085_Unified
+https://github.com/adafruit/Adafruit_Sensor
+http://www.github.com/markruys/arduino-DHT
+*/
+
+#define MY_NODE_ID AUTO
+#define MY_DEBUG_VERBOSE
+#define MY_SPECIAL_DEBUG
+
+// Enable debug prints to serial monitor
+#define MY_DEBUG 
+
+// Enable and select radio type attached
+#define MY_RADIO_NRF24
+
+#include <MySensors.h>
 #include <SPI.h>
-#include <MySensor.h>
-
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BMP085_U.h>
@@ -37,7 +58,6 @@ unsigned long SLEEP_TIME1 = 30000; // 1 minute required for forecast algorithm
 unsigned long SLEEP_TIME2 = 30000; // 1 minute required for forecast algorithm
 
 Adafruit_BMP085_Unified bmp = Adafruit_BMP085_Unified(1);    // Digital Pressure Sensor 
-MySensor gw;
 
 /*
 DP/Dt explanation
@@ -128,20 +148,19 @@ void initHumiditySensor()
 	dht.setup(HUMIDITY_SENSOR_DIGITAL_PIN);
 }
 
-void setup() 
+void presentation()
 {
-	gw.begin();
-	gw.sendSketchInfo("Weather Station Sensor", "2.1");
+	sendSketchInfo("Weather DHT11/BMP180", "2.3");
 
 	initPressureSensor();
 	initHumiditySensor();
 
-	gw.present(BARO_CHILD, S_BARO);
-	gw.present(TEMP_CHILD, S_TEMP);
-	gw.present(CHILD_ID_HUM, S_HUM);
-	gw.present(CHILD_ID_TEMP, S_TEMP);
+	present(BARO_CHILD, S_BARO);
+	present(TEMP_CHILD, S_TEMP);
+	present(CHILD_ID_HUM, S_HUM);
+	present(CHILD_ID_TEMP, S_TEMP);
 
-	metric = gw.getConfig().isMetric;
+	metric = getConfig().isMetric;
 }
 
 int getWeatherSituation(float pressure)
@@ -186,7 +205,7 @@ bool updatePressureSensor()
 		Serial.print(F("abs Pressure = "));
 		Serial.print(absolutePressure);
 		Serial.println(F(" hPa"));
-		
+
 		//float altitude = bmp.pressureToAltitude(SEALEVEL_PRESSURE, pressure);
 		//Serial.print(F("Altitude = "));
 		//Serial.print(altitude);
@@ -198,7 +217,7 @@ bool updatePressureSensor()
 		float pressureTemperature;
 		bmp.getTemperature(&pressureTemperature);
 
-		if (!metric) 
+		if (!metric)
 		{
 			// Convert to fahrenheit
 			pressureTemperature = pressureTemperature * 9.0 / 5.0 + 32.0;
@@ -215,7 +234,7 @@ bool updatePressureSensor()
 			Serial.print(F("Temperature = "));
 			Serial.print(pressureTemperature);
 			Serial.println(metric ? F(" *C") : F(" *F"));
-			if (!gw.send(tempMsg.set(lastPressureTemp, 1)))
+			if (!send(tempMsg.set(lastPressureTemp, 1)))
 			{
 				lastPressureTemp = -1.0;
 			}
@@ -229,7 +248,7 @@ bool updatePressureSensor()
 			Serial.print(F("sealevel Pressure = "));
 			Serial.print(pressure);
 			Serial.println(F(" hPa"));
-			if (!gw.send(pressureMsg.set(lastPressure, 1)))
+			if (!send(pressureMsg.set(lastPressure, 1)))
 			{
 				lastPressure = -1.0;
 			}
@@ -242,9 +261,9 @@ bool updatePressureSensor()
 			lastForecast = forecast;
 			Serial.print(F("Forecast = "));
 			Serial.println(weatherStrings[forecast]);
-			if (gw.send(forecastMsg.set(weatherStrings[lastForecast])))
+			if (send(forecastMsg.set(weatherStrings[lastForecast])))
 			{
-				if (!gw.send(forecastMsg2.set(lastForecast)))
+				if (!send(forecastMsg2.set(lastForecast)))
 				{
 				}
 			}
@@ -261,7 +280,7 @@ bool updatePressureSensor()
 			lastSituation = situation;
 			Serial.print(F("Situation = "));
 			Serial.println(situationStrings[situation]);
-			if (!gw.send(situationMsg.set(lastSituation, 0)))
+			if (!send(situationMsg.set(lastSituation, 0)))
 			{
 				lastSituation = -1.0;
 			}
@@ -292,7 +311,7 @@ bool updateHumiditySensor()
 			changed = true;
 			Serial.print(F("T: "));
 			Serial.println(temperature);
-			if (!gw.send(msgTemp.set(temperature, 1)))
+			if (!send(msgTemp.set(temperature, 1)))
 			{
 				lastTemp = -1.0;
 			}
@@ -302,8 +321,8 @@ bool updateHumiditySensor()
 	{
 		Serial.println(F("Failed reading temperature from DHT"));
 	}
-	
-	
+
+
 	if (!isnan(humidity))
 	{
 #ifdef SEND_WHEN_CHANGED
@@ -314,7 +333,7 @@ bool updateHumiditySensor()
 			changed = true;
 			Serial.print(F("H: "));
 			Serial.println(humidity);
-			if (!gw.send(msgHum.set(lastHum, 1)))
+			if (!send(msgHum.set(lastHum, 1)))
 			{
 				lastHum = -1.0;
 			}
@@ -324,17 +343,16 @@ bool updateHumiditySensor()
 	{
 		Serial.println(F("Failed reading humidity from DHT"));
 	}
-	
+
 	return changed;
 }
 
-void loop() 
+void loop()
 {
-
 	updatePressureSensor();
-	gw.sleep(SLEEP_TIME1);
+	sleep(SLEEP_TIME1);
 	updateHumiditySensor();
-	gw.sleep(SLEEP_TIME2);
+	sleep(SLEEP_TIME2);
 }
 
 
@@ -491,7 +509,7 @@ int sample(float pressure)
 	Serial.print(minuteCount);
 	Serial.print(F(" dP/dt = "));
 	Serial.print(dP_dt);
-	Serial.print(F("kPa/h --> "));	
+	Serial.print(F("kPa/h --> "));
 	Serial.println(weatherStrings[forecast]);
 
 	return forecast;
