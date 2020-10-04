@@ -1,4 +1,7 @@
-/*
+/* (c) windkh 2016
+MySensors 2.0
+Humidity sensor with DHT-22
+
 Arduino Uno
 PIN 2   grau           	NRF IRQ
 PIN 3   grün           	DHT22 PIN 2
@@ -16,10 +19,22 @@ GND     braun           NRF GND
 DHT22 PIN3 unbelegt
 Widerstand 10K DHT22 PIN2 --> 3.3V
 
+required software:
+http://www.github.com/markruys/arduino-DHT
 */
 
+#define MY_NODE_ID AUTO
+#define MY_DEBUG_VERBOSE
+#define MY_SPECIAL_DEBUG
+
+// Enable debug prints to serial monitor
+#define MY_DEBUG 
+
+// Enable and select radio type attached
+#define MY_RADIO_NRF24
+
 #include <SPI.h>
-#include <MySensor.h>  
+#include <MySensors.h>  
 #include <DHT.h>  
 
 
@@ -36,7 +51,6 @@ Battery battery;
 #endif
 
 
-MySensor gw;
 DHT dht;
 
 float lastTemp;
@@ -44,21 +58,20 @@ float lastHum;
 MyMessage msgHum(CHILD_ID_HUM, V_HUM);
 MyMessage msgTemp(CHILD_ID_TEMP, V_TEMP);
 
-void setup()
+void presentation()
 {
 #ifdef BATTERY_POWERED
 	battery.begin(1200000, 400000);
 #endif
 
-	gw.begin(NULL, AUTO, false);
 	dht.setup(HUMIDITY_SENSOR_DIGITAL_PIN, DHT::AM2302);
 	
 	// Send the Sketch Version Information to the Gateway
-	gw.sendSketchInfo("Humidity", "1.2");
+	sendSketchInfo("Humidity", "2.0");
 
 	// Register all sensors to gw (they will be created as child devices)
-	gw.present(CHILD_ID_HUM, S_HUM);
-	gw.present(CHILD_ID_TEMP, S_TEMP);
+	present(CHILD_ID_HUM, S_HUM);
+	present(CHILD_ID_TEMP, S_TEMP);
 }
 
 bool temperatureChanged()
@@ -116,17 +129,17 @@ void loop()
 	bool humChanged = humidityChanged();
 	if (tempChanged || humChanged)
 	{
-		gw.send(msgTemp.set(lastTemp, 1));
-		gw.send(msgHum.set(lastHum, 1));
+		send(msgTemp.set(lastTemp, 1));
+		send(msgHum.set(lastHum, 1));
 	}
 
-	gw.sleep(SLEEP_TIME); //sleep a bit
+	sleep(SLEEP_TIME); //sleep a bit
 	
 #ifdef BATTERY_POWERED
 	int batteryPercent;
 	if (battery.checkVoltage(&batteryPercent))
 	{
-		gw.sendBatteryLevel(batteryPercent);
+		sendBatteryLevel(batteryPercent);
 	}
 #endif
 }
